@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SORTIE 09 // SLIDE OUT // THE HARD DECK ARCADE</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #060913;
+      color: #e6f2ff;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .top-bar {
+      width: 100%;
+      background: rgba(8, 14, 28, 0.95);
+      border-bottom: 1px solid #00f3ff;
+      padding: 8px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+    .back-btn {
+      background: #ff9e00;
+      color: #050711;
+      text-decoration: none;
+      padding: 5px 12px;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+    .back-btn:hover { filter: brightness(1.15); }
+    .title-tag { color: #00f3ff; font-weight: bold; letter-spacing: 1px; }
+    .controls-tag { color: #00ff66; }
+    .game-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      width: 100%;
+    }
+    canvas {
+      background: #02040a;
+      border: 2px solid #00f3ff;
+      box-shadow: 0 0 24px rgba(0, 243, 255, 0.35);
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+    .hud-strip {
+      margin-top: 8px;
+      display: flex;
+      gap: 20px;
+      font-size: 0.95rem;
+      color: #ffd700;
+    }
+    button.arcade-btn {
+      margin-top: 10px;
+      background: #00ff66;
+      color: #040812;
+      border: none;
+      padding: 8px 18px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="../index.html" class="back-btn">&larr; HARD DECK</a>
+    <span class="title-tag">SORTIE 09 // SLIDE OUT</span>
+    <span class="controls-tag">DRAG RIGS & CONTAINERS TO CLEAR THE EXIT LANE ON THE RIGHT</span>
+  </div>
+  <div class="game-wrap">
+    <canvas id="c" width="480" height="480"></canvas><div class="hud-strip"><span id="mv">MOVES: 0</span><span id="st">STATUS: BLOCKED</span></div><button class="arcade-btn" onclick="init()">RESET YARD</button>
+  </div>
+  <script>
+    
+    const c = document.getElementById('c'), ctx = c.getContext('2d');
+    const N = 6, S = 80;
+    let blocks, dragging, startCoord, moves, won;
+    function init() {
+      moves = 0; won = false; dragging = null;
+      blocks = [
+        { id: 'TARGET', x: 0, y: 2, len: 2, dir: 'H', color: '#00ff66' },
+        { id: 'B1', x: 2, y: 0, len: 3, dir: 'V', color: '#ff9e00' },
+        { id: 'B2', x: 3, y: 1, len: 2, dir: 'V', color: '#00f3ff' },
+        { id: 'B3', x: 0, y: 4, len: 3, dir: 'H', color: '#ff2a55' },
+        { id: 'B4', x: 4, y: 3, len: 3, dir: 'V', color: '#ffd700' }
+      ];
+      updateHud(); draw();
+    }
+    function isOccupied(gx, gy, ignore) {
+      if (gx < 0 || gy < 0 || gx >= N || gy >= N) return true;
+      return blocks.some(b => {
+        if (b === ignore) return false;
+        for (let i = 0; i < b.len; i++) {
+          const bx = b.x + (b.dir === 'H' ? i : 0);
+          const by = b.y + (b.dir === 'V' ? i : 0);
+          if (bx === gx && by === gy) return true;
+        }
+        return false;
+      });
+    }
+    c.addEventListener('mousedown', e => {
+      if (won) return;
+      const rect = c.getBoundingClientRect();
+      const gx = Math.floor(((e.clientX - rect.left)/rect.width)*N);
+      const gy = Math.floor(((e.clientY - rect.top)/rect.height)*N);
+      dragging = blocks.find(b => {
+        for (let i = 0; i < b.len; i++) {
+          if (gx === b.x + (b.dir === 'H' ? i : 0) && gy === b.y + (b.dir === 'V' ? i : 0)) return true;
+        }
+        return false;
+      });
+      startCoord = { gx, gy };
+    });
+    window.addEventListener('mouseup', e => {
+      if (!dragging) return;
+      const rect = c.getBoundingClientRect();
+      const gx = Math.floor(((e.clientX - rect.left)/rect.width)*N);
+      const gy = Math.floor(((e.clientY - rect.top)/rect.height)*N);
+      const step = dragging.dir === 'H' ? Math.sign(gx - startCoord.gx) : Math.sign(gy - startCoord.gy);
+      if (step !== 0) {
+        const checkX = dragging.dir === 'H' ? (step > 0 ? dragging.x + dragging.len : dragging.x - 1) : dragging.x;
+        const checkY = dragging.dir === 'V' ? (step > 0 ? dragging.y + dragging.len : dragging.y - 1) : dragging.y;
+        if (!isOccupied(checkX, checkY, dragging)) {
+          if (dragging.dir === 'H') dragging.x += step; else dragging.y += step;
+          moves++;
+          if (dragging.id === 'TARGET' && dragging.x + dragging.len === N) won = true;
+          updateHud(); draw();
+        }
+      }
+      dragging = null;
+    });
+    function updateHud() {
+      document.getElementById('mv').textContent = 'MOVES: ' + moves;
+      document.getElementById('st').textContent = won ? 'STATUS: CONVOY CLEARED!' : 'STATUS: EXIT LANE RIGHT (ROW 3)';
+    }
+    function draw() {
+      ctx.fillStyle = '#050914'; ctx.fillRect(0, 0, 480, 480);
+      for (let r = 0; r < N; r++) for (let col = 0; col < N; col++) {
+        ctx.strokeStyle = '#1d3557'; ctx.strokeRect(col*S, r*S, S, S);
+      }
+      // Exit marker
+      ctx.fillStyle = '#00ff66'; ctx.fillRect(472, 2*S + 10, 8, S - 20);
+      blocks.forEach(b => {
+        const w = b.dir === 'H' ? b.len*S - 10 : S - 10;
+        const h = b.dir === 'V' ? b.len*S - 10 : S - 10;
+        ctx.fillStyle = b.color;
+        ctx.fillRect(b.x*S + 5, b.y*S + 5, w, h);
+        ctx.fillStyle = '#050914'; ctx.font = 'bold 13px Courier New';
+        ctx.fillText(b.id === 'TARGET' ? 'COMMAND RIG' : b.id, b.x*S + 12, b.y*S + 26);
+      });
+    }
+    init();
+    
+  </script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SORTIE 07 // YAR'S REVENGE // THE HARD DECK ARCADE</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #060913;
+      color: #e6f2ff;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .top-bar {
+      width: 100%;
+      background: rgba(8, 14, 28, 0.95);
+      border-bottom: 1px solid #00f3ff;
+      padding: 8px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+    .back-btn {
+      background: #ff9e00;
+      color: #050711;
+      text-decoration: none;
+      padding: 5px 12px;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+    .back-btn:hover { filter: brightness(1.15); }
+    .title-tag { color: #00f3ff; font-weight: bold; letter-spacing: 1px; }
+    .controls-tag { color: #00ff66; }
+    .game-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      width: 100%;
+    }
+    canvas {
+      background: #02040a;
+      border: 2px solid #00f3ff;
+      box-shadow: 0 0 24px rgba(0, 243, 255, 0.35);
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+    .hud-strip {
+      margin-top: 8px;
+      display: flex;
+      gap: 20px;
+      font-size: 0.95rem;
+      color: #ffd700;
+    }
+    button.arcade-btn {
+      margin-top: 10px;
+      background: #00ff66;
+      color: #040812;
+      border: none;
+      padding: 8px 18px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="../index.html" class="back-btn">&larr; HARD DECK</a>
+    <span class="title-tag">SORTIE 07 // YAR'S REVENGE</span>
+    <span class="controls-tag">ARROWS/WASD: FLY & NIBBLE SHIELD | SPACE: FIRE ZORLON CANNON | R: RESTART</span>
+  </div>
+  <div class="game-wrap">
+    <canvas id="c" width="700" height="480"></canvas><div class="hud-strip"><span id="sc">SCORE: 0</span><span id="zr">ZORLON: CHARGING</span></div>
+  </div>
+  <script>
+    
+    const c = document.getElementById('c'), ctx = c.getContext('2d');
+    let yar, shieldCells, qotile, zorlon, zorlonReady, swirl, score, gameOver, keys = {};
+    function init() {
+      yar = { x: 120, y: 240 }; shieldCells = [];
+      for (let col = 0; col < 4; col++) {
+        for (let row = 0; row < 16; row++) {
+          shieldCells.push({ x: 520 + col*22, y: 55 + row*23 });
+        }
+      }
+      qotile = { x: 640, y: 240, dy: 2.2 };
+      zorlon = null; zorlonReady = false; swirl = null; score = 0; gameOver = false;
+    }
+    window.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (e.key === ' ') {
+        e.preventDefault();
+        if (!gameOver && zorlonReady && !zorlon) {
+          zorlon = { x: 45, y: yar.y };
+          zorlonReady = false;
+        }
+      }
+      if (e.key.toLowerCase() === 'r') init();
+    });
+    window.addEventListener('keyup', e => keys[e.key] = false);
+    function update() {
+      if (gameOver) return;
+      if ((keys['ArrowLeft'] || keys['a']) && yar.x > 60) yar.x -= 4.2;
+      if ((keys['ArrowRight'] || keys['d']) && yar.x < 620) yar.x += 4.2;
+      if ((keys['ArrowUp'] || keys['w']) && yar.y > 20) yar.y -= 4.2;
+      if ((keys['ArrowDown'] || keys['s']) && yar.y < 460) yar.y += 4.2;
+
+      // Nibble shield cells
+      shieldCells.forEach((cell, i) => {
+        if (Math.abs(yar.x - (cell.x + 10)) < 16 && Math.abs(yar.y - (cell.y + 10)) < 16) {
+          shieldCells.splice(i, 1);
+          score += 50;
+          zorlonReady = true;
+        }
+      });
+
+      qotile.y += qotile.dy;
+      if (qotile.y < 50 || qotile.y > 430) qotile.dy *= -1;
+
+      if (!swirl && Math.random() < 0.015) {
+        swirl = { x: qotile.x, y: qotile.y, vx: (yar.x - qotile.x)/75, vy: (yar.y - qotile.y)/75 };
+      }
+      if (swirl) {
+        swirl.x += swirl.vx; swirl.y += swirl.vy;
+        const inNeutralZone = yar.x > 240 && yar.x < 340;
+        if (!inNeutralZone && Math.hypot(swirl.x - yar.x, swirl.y - yar.y) < 16) gameOver = true;
+        if (swirl.x < 0 || swirl.y < 0 || swirl.y > 480) swirl = null;
+      }
+
+      if (zorlon) {
+        zorlon.x += 10;
+        shieldCells.forEach((cell, i) => {
+          if (Math.abs(zorlon.x - (cell.x + 10)) < 14 && Math.abs(zorlon.y - (cell.y + 10)) < 14) {
+            shieldCells.splice(i, 1); zorlon = null;
+          }
+        });
+        if (zorlon && Math.hypot(zorlon.x - qotile.x, zorlon.y - qotile.y) < 24) {
+          score += 1000; zorlon = null;
+          shieldCells = [];
+          for (let col = 0; col < 4; col++) for (let row = 0; row < 16; row++) shieldCells.push({ x: 520 + col*22, y: 55 + row*23 });
+        }
+        if (zorlon && zorlon.x > 700) zorlon = null;
+      }
+
+      document.getElementById('sc').textContent = 'SCORE: ' + score;
+      document.getElementById('zr').textContent = zorlonReady ? 'ZORLON: ARMED (PRESS SPACE)' : 'ZORLON: NIBBLE SHIELD TO ARM';
+    }
+    function draw() {
+      ctx.fillStyle = '#040612'; ctx.fillRect(0, 0, 700, 480);
+      // Neutral Zone
+      ctx.fillStyle = 'rgba(0, 243, 255, 0.12)'; ctx.fillRect(240, 0, 100, 480);
+      // Shield
+      ctx.fillStyle = '#ff9e00';
+      shieldCells.forEach(cell => ctx.fillRect(cell.x, cell.y, 18, 18));
+      // Qotile
+      ctx.fillStyle = '#ff2a55'; ctx.beginPath(); ctx.arc(qotile.x, qotile.y, 18, 0, Math.PI*2); ctx.fill();
+      // Yar
+      ctx.fillStyle = '#00ff66'; ctx.beginPath(); ctx.arc(yar.x, yar.y, 11, 0, Math.PI*2); ctx.fill();
+      // Zorlon Cannon on left edge
+      if (zorlonReady) { ctx.fillStyle = '#ffd700'; ctx.fillRect(10, yar.y - 6, 30, 12); }
+      if (zorlon) { ctx.fillStyle = '#00f3ff'; ctx.fillRect(zorlon.x - 14, zorlon.y - 5, 28, 10); }
+      if (swirl) { ctx.strokeStyle = '#ff2a55'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(swirl.x, swirl.y, 11, 0, Math.PI*2); ctx.stroke(); }
+      if (gameOver) {
+        ctx.fillStyle = '#ff2a55'; ctx.font = 'bold 34px Courier New'; ctx.textAlign = 'center';
+        ctx.fillText('DESTROYED BY SWIRL - PRESS R', 350, 240);
+      }
+    }
+    init();
+    setInterval(() => { update(); draw(); }, 1000/60);
+    
+  </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SORTIE 03 // SPACE INVADERS // THE HARD DECK ARCADE</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #060913;
+      color: #e6f2ff;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .top-bar {
+      width: 100%;
+      background: rgba(8, 14, 28, 0.95);
+      border-bottom: 1px solid #00f3ff;
+      padding: 8px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+    .back-btn {
+      background: #ff9e00;
+      color: #050711;
+      text-decoration: none;
+      padding: 5px 12px;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+    .back-btn:hover { filter: brightness(1.15); }
+    .title-tag { color: #00f3ff; font-weight: bold; letter-spacing: 1px; }
+    .controls-tag { color: #00ff66; }
+    .game-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      width: 100%;
+    }
+    canvas {
+      background: #02040a;
+      border: 2px solid #00f3ff;
+      box-shadow: 0 0 24px rgba(0, 243, 255, 0.35);
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+    .hud-strip {
+      margin-top: 8px;
+      display: flex;
+      gap: 20px;
+      font-size: 0.95rem;
+      color: #ffd700;
+    }
+    button.arcade-btn {
+      margin-top: 10px;
+      background: #00ff66;
+      color: #040812;
+      border: none;
+      padding: 8px 18px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="../index.html" class="back-btn">&larr; HARD DECK</a>
+    <span class="title-tag">SORTIE 03 // SPACE INVADERS</span>
+    <span class="controls-tag">LEFT/RIGHT: MOVE | SPACE: LASER | R: RESTART</span>
+  </div>
+  <div class="game-wrap">
+    <canvas id="c" width="680" height="540"></canvas><div class="hud-strip"><span id="sc">SCORE: 0</span><span id="wv">WAVE: 1</span></div>
+  </div>
+  <script>
+    
+    const c = document.getElementById('c'), ctx = c.getContext('2d');
+    let ship, bullets, enemyBullets, aliens, dir, score, wave, gameOver, keys = {};
+    function init(w = 1) {
+      ship = { x: 320, y: 500 }; bullets = []; enemyBullets = []; aliens = [];
+      dir = 1.4 + w*0.3; wave = w; if (w === 1) score = 0; gameOver = false;
+      for (let r = 0; r < 4; r++) {
+        for (let col = 0; col < 10; col++) {
+          aliens.push({ x: 80 + col*50, y: 55 + r*40, row: r });
+        }
+      }
+    }
+    window.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (e.key === ' ') { e.preventDefault(); if (!gameOver && bullets.length < 3) bullets.push({ x: ship.x + 16, y: ship.y }); }
+      if (e.key.toLowerCase() === 'r') init(1);
+    });
+    window.addEventListener('keyup', e => keys[e.key] = false);
+    function update() {
+      if (gameOver) return;
+      if ((keys['ArrowLeft'] || keys['a']) && ship.x > 10) ship.x -= 5;
+      if ((keys['ArrowRight'] || keys['d']) && ship.x < c.width - 42) ship.x += 5;
+      bullets.forEach(b => b.y -= 8);
+      bullets = bullets.filter(b => b.y > 0);
+      enemyBullets.forEach(b => b.y += 4.5);
+      enemyBullets = enemyBullets.filter(b => b.y < c.height);
+
+      let edge = false;
+      aliens.forEach(a => {
+        a.x += dir;
+        if (a.x < 20 || a.x > c.width - 48) edge = true;
+        if (a.y > 465) gameOver = true;
+      });
+      if (edge) {
+        dir *= -1;
+        aliens.forEach(a => a.y += 18);
+      }
+      if (aliens.length && Math.random() < 0.03) {
+        const shooter = aliens[Math.floor(Math.random()*aliens.length)];
+        enemyBullets.push({ x: shooter.x + 14, y: shooter.y + 18 });
+      }
+      bullets.forEach((b, bi) => {
+        aliens.forEach((a, ai) => {
+          if (b.x > a.x && b.x < a.x + 28 && b.y > a.y && b.y < a.y + 20) {
+            bullets.splice(bi, 1); aliens.splice(ai, 1); score += 50;
+          }
+        });
+      });
+      enemyBullets.forEach(b => {
+        if (b.x > ship.x && b.x < ship.x + 32 && b.y > ship.y && b.y < ship.y + 16) gameOver = true;
+      });
+      if (aliens.length === 0) init(wave + 1);
+      document.getElementById('sc').textContent = 'SCORE: ' + score;
+      document.getElementById('wv').textContent = 'WAVE: ' + wave;
+    }
+    function draw() {
+      ctx.fillStyle = '#02050c'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.fillStyle = '#00ff66'; ctx.fillRect(ship.x, ship.y, 32, 14); ctx.fillRect(ship.x + 12, ship.y - 6, 8, 6);
+      const colors = ['#ff2a55', '#ff9e00', '#00f3ff', '#ffd700'];
+      aliens.forEach(a => {
+        ctx.fillStyle = colors[a.row % 4];
+        ctx.fillRect(a.x, a.y, 28, 18);
+        ctx.fillStyle = '#02050c'; ctx.fillRect(a.x + 6, a.y + 5, 4, 4); ctx.fillRect(a.x + 18, a.y + 5, 4, 4);
+      });
+      ctx.fillStyle = '#ffd700'; bullets.forEach(b => ctx.fillRect(b.x - 2, b.y, 4, 12));
+      ctx.fillStyle = '#ff2a55'; enemyBullets.forEach(b => ctx.fillRect(b.x - 2, b.y, 4, 12));
+      if (gameOver) {
+        ctx.fillStyle = '#ff2a55'; ctx.font = 'bold 34px Courier New'; ctx.textAlign = 'center';
+        ctx.fillText('DEFENSE BREACHED - PRESS R', c.width/2, c.height/2);
+      }
+    }
+    init(1);
+    setInterval(() => { update(); draw(); }, 1000/60);
+    
+  </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SORTIE 05 // KEYSTONE KAPERS // THE HARD DECK ARCADE</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #060913;
+      color: #e6f2ff;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .top-bar {
+      width: 100%;
+      background: rgba(8, 14, 28, 0.95);
+      border-bottom: 1px solid #00f3ff;
+      padding: 8px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+    .back-btn {
+      background: #ff9e00;
+      color: #050711;
+      text-decoration: none;
+      padding: 5px 12px;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+    .back-btn:hover { filter: brightness(1.15); }
+    .title-tag { color: #00f3ff; font-weight: bold; letter-spacing: 1px; }
+    .controls-tag { color: #00ff66; }
+    .game-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      width: 100%;
+    }
+    canvas {
+      background: #02040a;
+      border: 2px solid #00f3ff;
+      box-shadow: 0 0 24px rgba(0, 243, 255, 0.35);
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+    .hud-strip {
+      margin-top: 8px;
+      display: flex;
+      gap: 20px;
+      font-size: 0.95rem;
+      color: #ffd700;
+    }
+    button.arcade-btn {
+      margin-top: 10px;
+      background: #00ff66;
+      color: #040812;
+      border: none;
+      padding: 8px 18px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="../index.html" class="back-btn">&larr; HARD DECK</a>
+    <span class="title-tag">SORTIE 05 // KEYSTONE KAPERS</span>
+    <span class="controls-tag">LEFT/RIGHT: RUN | UP: JUMP / ELEVATOR | R: RESTART</span>
+  </div>
+  <div class="game-wrap">
+    <canvas id="c" width="700" height="480"></canvas><div class="hud-strip"><span id="sc">SCORE: 0</span><span id="tm">TIME: 60</span></div>
+  </div>
+  <script>
+    
+    const c = document.getElementById('c'), ctx = c.getContext('2d');
+    const FLOORS = [430, 320, 210, 100];
+    let cop, crook, hazards, score, timer, gameOver, keys = {};
+    function init() {
+      cop = { x: 60, y: 430, floor: 0, vy: 0, jumping: false };
+      crook = { x: 580, y: 100, floor: 3, dir: -1.8 };
+      hazards = [
+        { x: 350, floor: 0, dx: -2.5 },
+        { x: 220, floor: 1, dx: 2.8 },
+        { x: 480, floor: 2, dx: -3.1 }
+      ];
+      score = 0; timer = 60; gameOver = false;
+    }
+    window.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if ((e.key === 'ArrowUp' || e.key === 'w') && !gameOver) {
+        if (cop.x > 610 && cop.floor < 3) { cop.floor++; cop.y = FLOORS[cop.floor]; }
+        else if (!cop.jumping) { cop.vy = -10.5; cop.jumping = true; }
+      }
+      if (e.key.toLowerCase() === 'r') init();
+    });
+    window.addEventListener('keyup', e => keys[e.key] = false);
+    function update() {
+      if (gameOver) return;
+      timer -= 1/60;
+      if (timer <= 0) { timer = 0; gameOver = true; }
+      if ((keys['ArrowLeft'] || keys['a']) && cop.x > 30) cop.x -= 4.2;
+      if ((keys['ArrowRight'] || keys['d']) && cop.x < 670) cop.x += 4.2;
+
+      if (cop.jumping) {
+        cop.y += cop.vy; cop.vy += 0.55;
+        if (cop.y >= FLOORS[cop.floor]) { cop.y = FLOORS[cop.floor]; cop.jumping = false; cop.vy = 0; }
+      }
+      crook.x += crook.dir;
+      if (crook.x < 60 || crook.x > 640) crook.dir *= -1;
+
+      hazards.forEach(h => {
+        h.x += h.dx;
+        if (h.x < 40 || h.x > 660) h.dx *= -1;
+        if (h.floor === cop.floor && Math.abs(h.x - cop.x) < 18 && Math.abs(FLOORS[h.floor] - cop.y) < 16) {
+          cop.x = 60; cop.floor = 0; cop.y = FLOORS[0];
+        }
+      });
+
+      if (cop.floor === crook.floor && Math.abs(cop.x - crook.x) < 24) {
+        score += Math.round(timer * 50) + 500;
+        cop.x = 60; cop.floor = 0; cop.y = FLOORS[0]; timer = 60;
+      }
+      document.getElementById('sc').textContent = 'SCORE: ' + score;
+      document.getElementById('tm').textContent = 'TIME: ' + Math.ceil(timer);
+    }
+    function draw() {
+      ctx.fillStyle = '#070b19'; ctx.fillRect(0, 0, c.width, c.height);
+      FLOORS.forEach((fy, i) => {
+        ctx.fillStyle = '#1e3a5f'; ctx.fillRect(20, fy, 660, 10);
+        if (i < 3) {
+          ctx.fillStyle = 'rgba(0, 243, 255, 0.25)'; ctx.fillRect(615, fy - 105, 45, 105);
+          ctx.fillStyle = '#00f3ff'; ctx.font = '11px Courier New'; ctx.fillText('LIFT', 622, fy - 50);
+        }
+      });
+      // Crook
+      ctx.fillStyle = '#ff2a55'; ctx.fillRect(crook.x - 10, crook.y - 28, 20, 28);
+      // Cop
+      ctx.fillStyle = '#00f3ff'; ctx.fillRect(cop.x - 10, cop.y - 28, 20, 28);
+      ctx.fillStyle = '#ffd700'; ctx.fillRect(cop.x - 8, cop.y - 32, 16, 5);
+      // Hazards
+      ctx.fillStyle = '#ff9e00';
+      hazards.forEach(h => { ctx.beginPath(); ctx.arc(h.x, FLOORS[h.floor] - 10, 10, 0, Math.PI*2); ctx.fill(); });
+      if (gameOver) {
+        ctx.fillStyle = '#ff2a55'; ctx.font = 'bold 34px Courier New'; ctx.textAlign = 'center';
+        ctx.fillText('SUSPECT ESCAPED - PRESS R', 350, 240);
+      }
+    }
+    init();
+    setInterval(() => { update(); draw(); }, 1000/60);
+    
+  </script>
+</body>
+</html>

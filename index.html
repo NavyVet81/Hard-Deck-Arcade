@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>THE HARD DECK ARCADE // Naval Aviation & Fleet Recreation Command</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070913;
+      --panel-bg: rgba(11, 18, 36, 0.88);
+      --neon-cyan: #00f3ff;
+      --neon-amber: #ff9e00;
+      --neon-crimson: #ff2a55;
+      --neon-green: #00ff66;
+      --neon-gold: #ffd700;
+      --text-main: #e6f2ff;
+      --text-muted: #7a94b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* CRT Scanlines & Vignette */
+    .crt-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      background:
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%),
+        radial-gradient(circle at center, transparent 60%, rgba(0, 0, 0, 0.65) 100%);
+      background-size: 100% 4px, 100% 100%;
+      transition: opacity 0.3s ease;
+    }
+
+    body.crt-off .crt-overlay {
+      opacity: 0;
+    }
+
+    /* Background Sunset, F-14 & Flight Deck Grid */
+    .sky-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background: linear-gradient(180deg, #050711 0%, #0d1633 42%, #2b133d 62%, #591c38 72%, #080b14 73%);
+    }
+
+    .sun-disc {
+      position: fixed;
+      top: 16%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #ffe600 0%, #ff7b00 50%, #ff1e56 100%);
+      box-shadow: 0 0 60px rgba(255, 123, 0, 0.55);
+      z-index: -2;
+      -webkit-mask-image: repeating-linear-gradient(
+        to bottom,
+        #000 0px,
+        #000 14px,
+        transparent 14px,
+        transparent 18px
+      );
+      mask-image: repeating-linear-gradient(
+        to bottom,
+        #000 0px,
+        #000 14px,
+        transparent 14px,
+        transparent 18px
+      );
+    }
+
+    .f14-patrol {
+      position: fixed;
+      top: 14%;
+      left: -180px;
+      width: 140px;
+      height: 60px;
+      z-index: -1;
+      opacity: 0.75;
+      filter: drop-shadow(0 0 8px var(--neon-cyan));
+      animation: flyby 24s linear infinite;
+    }
+
+    @keyframes flyby {
+      0% { transform: translateX(0) translateY(0) scale(0.85); }
+      50% { transform: translateX(calc(50vw + 90px)) translateY(-18px) scale(1); }
+      100% { transform: translateX(calc(100vw + 360px)) translateY(6px) scale(0.85); }
+    }
+
+    .flight-deck-grid {
+      position: fixed;
+      bottom: 0;
+      left: -25%;
+      width: 150%;
+      height: 36vh;
+      z-index: -1;
+      background-image:
+        linear-gradient(to right, rgba(0, 243, 255, 0.22) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 158, 0, 0.28) 2px, transparent 2px);
+      background-size: 70px 45px;
+      transform: perspective(360px) rotateX(64deg);
+      transform-origin: top center;
+      animation: deckScroll 3.5s linear infinite;
+      border-top: 2px solid var(--neon-amber);
+      box-shadow: 0 -10px 35px rgba(255, 158, 0, 0.35);
+    }
+
+    @keyframes deckScroll {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 45px; }
+    }
+
+    /* Top Telemetry HUD Bar */
+    .hud-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: rgba(5, 9, 20, 0.92);
+      border-bottom: 1px solid rgba(0, 243, 255, 0.35);
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+    }
+
+    .hud-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .hud-tag {
+      color: var(--neon-cyan);
+    }
+
+    .hud-tag span {
+      color: var(--neon-green);
+      font-weight: bold;
+    }
+
+    .hud-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .hud-btn {
+      background: rgba(0, 243, 255, 0.1);
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      padding: 6px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+
+    .hud-btn:hover {
+      background: var(--neon-cyan);
+      color: #050711;
+      box-shadow: 0 0 12px var(--neon-cyan);
+    }
+
+    .hud-btn.amber {
+      border-color: var(--neon-amber);
+      color: var(--neon-amber);
+      background: rgba(255, 158, 0, 0.12);
+    }
+
+    .hud-btn.amber:hover {
+      background: var(--neon-amber);
+      color: #050711;
+      box-shadow: 0 0 12px var(--neon-amber);
+    }
+
+    /* Marquee Header */
+    header {
+      text-align: center;
+      padding: 32px 16px 22px;
+    }
+
+    .command-sub {
+      font-size: 0.85rem;
+      letter-spacing: 3px;
+      color: var(--neon-amber);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .neon-sign {
+      display: inline-block;
+      padding: 18px 34px;
+      border: 3px solid var(--neon-crimson);
+      border-radius: 10px;
+      background: rgba(8, 12, 26, 0.82);
+      box-shadow:
+        0 0 18px rgba(255, 42, 85, 0.7),
+        inset 0 0 18px rgba(255, 42, 85, 0.45);
+    }
+
+    .neon-sign h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: clamp(1.8rem, 4.5vw, 3.3rem);
+      letter-spacing: 4px;
+      color: #fff;
+      text-shadow:
+        0 0 8px #fff,
+        0 0 18px var(--neon-crimson),
+        0 0 36px var(--neon-crimson);
+      animation: neonFlicker 5s infinite;
+    }
+
+    .neon-sign .tagline {
+      margin-top: 8px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(0.6rem, 1.4vw, 0.8rem);
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px var(--neon-cyan);
+      letter-spacing: 2px;
+    }
+
+    @keyframes neonFlicker {
+      0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+      20%, 24%, 55% { opacity: 0.78; }
+    }
+
+    /* Main Cabinet Grid */
+    main {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 16px 20px 60px;
+    }
+
+    .deck-prompt {
+      text-align: center;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.72rem;
+      color: var(--neon-gold);
+      margin-bottom: 24px;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+      animation: blink 1.4s steps(2, start) infinite;
+    }
+
+    @keyframes blink {
+      to { visibility: hidden; }
+    }
+
+    .cabinet-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 24px;
+    }
+
+    .cabinet-card {
+      background: var(--panel-bg);
+      border: 2px solid rgba(0, 243, 255, 0.35);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      outline: none;
+    }
+
+    .cabinet-card:hover,
+    .cabinet-card:focus,
+    .cabinet-card.selected {
+      transform: translateY(-6px);
+      border-color: var(--neon-amber);
+      box-shadow:
+        0 0 22px rgba(255, 158, 0, 0.55),
+        inset 0 0 14px rgba(255, 158, 0, 0.2);
+    }
+
+    .cabinet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 0.78rem;
+    }
+
+    .sortie-id {
+      color: var(--neon-amber);
+      font-weight: bold;
+    }
+
+    .mission-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(0, 243, 255, 0.14);
+      border: 1px solid rgba(0, 243, 255, 0.4);
+      color: var(--neon-cyan);
+      font-size: 0.72rem;
+    }
+
+    .mission-badge.sub-command {
+      background: rgba(0, 255, 102, 0.15);
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+    }
+
+    /* Mini CRT Monitor Preview */
+    .crt-screen {
+      height: 135px;
+      background: #03060c;
+      border: 3px solid #1e2d4a;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+    }
+
+    .crt-screen canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .game-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .game-desc {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.4;
+      margin-bottom: 14px;
+    }
+
+    .cabinet-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px dashed rgba(122, 148, 184, 0.3);
+      padding-top: 10px;
+      font-size: 0.78rem;
+    }
+
+    .rom-path {
+      color: var(--text-muted);
+    }
+
+    .launch-pill {
+      color: var(--neon-green);
+      font-weight: bold;
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 5, 12, 0.86);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #091124;
+      border: 2px solid var(--neon-cyan);
+      border-radius: 10px;
+      max-width: 680px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 0 35px rgba(0, 243, 255, 0.45);
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: transparent;
+      border: 1px solid var(--neon-crimson);
+      color: var(--neon-crimson);
+      padding: 4px 10px;
+      font-family: 'Share Tech Mono', monospace;
+      cursor: pointer;
+    }
+
+    .modal-close:hover {
+      background: var(--neon-crimson);
+      color: #fff;
+    }
+
+    .modal-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.4rem;
+      color: var(--neon-amber);
+      margin-bottom: 8px;
+    }
+
+    .modal-meta {
+      color: var(--neon-cyan);
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .btn-primary {
+      background: var(--neon-green);
+      color: #03080d;
+      border: none;
+      padding: 12px 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      border-radius: 4px;
+      box-shadow: 0 0 15px rgba(0, 255, 102, 0.45);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.12);
+    }
+
+    .btn-secondary {
+      background: rgba(0, 243, 255, 0.12);
+      color: var(--neon-cyan);
+      border: 1px solid var(--neon-cyan);
+      padding: 12px 18px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .sim-container {
+      margin-top: 14px;
+      border: 2px solid var(--neon-amber);
+      background: #02050a;
+      border-radius: 6px;
+      padding: 10px;
+      display: none;
+    }
+
+    .sim-container.active {
+      display: block;
+    }
+
+    #simCanvas {
+      width: 100%;
+      height: 220px;
+      display: block;
+      background: #040914;
+    }
+
+    .briefing-code {
+      background: #040814;
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      padding: 12px;
+      border-radius: 6px;
+      color: var(--neon-green);
+      font-size: 0.82rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid rgba(0, 243, 255, 0.18);
+      background: rgba(5, 9, 20, 0.85);
+    }
+  </style>
+</head>
+<body>
+  <div class="crt-overlay"></div>
+  <div class="sky-backdrop"></div>
+  <div class="sun-disc"></div>
+
+  <!-- F-14 Tomcat Patrol Silhouette -->
+  <svg class="f14-patrol" viewBox="0 0 200 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M185 42 L145 36 L115 22 L75 10 L62 12 L88 35 L42 32 L18 18 L10 20 L25 38 L8 42 L25 46 L10 64 L18 66 L42 52 L88 49 L62 72 L75 74 L115 62 L145 48 Z" fill="#00f3ff" fill-opacity="0.25" stroke="#00f3ff" stroke-width="2"/>
+    <ellipse cx="148" cy="42" rx="16" ry="4" fill="#ff9e00"/>
+  </svg>
+
+  <div class="flight-deck-grid"></div>
+
+  <!-- Top Telemetry HUD -->
+  <div class="hud-bar">
+    <div class="hud-stats">
+      <div class="hud-tag">CALLSIGN: <span>MAVERICK-01</span></div>
+      <div class="hud-tag">DECK STATUS: <span>GREEN // CATAPULT READY</span></div>
+      <div class="hud-tag">CREDITS: <span id="creditCount">99</span></div>
+    </div>
+    <div class="hud-controls">
+      <button class="hud-btn" id="crtToggle">CRT: ON</button>
+      <button class="hud-btn" id="sfxToggle">SFX: ON</button>
+      <button class="hud-btn amber" id="briefingBtn">FLIGHT BRIEFING (GITHUB SETUP)</button>
+    </div>
+  </div>
+
+  <!-- Neon Marquee Header -->
+  <header>
+    <div class="command-sub">NAVAL AVIATION &amp; FLEET RECREATION COMMAND // EST. 1986</div>
+    <div class="neon-sign">
+      <h1>THE HARD DECK ARCADE</h1>
+      <div class="tagline">NO POINTS FOR SECOND PLACE</div>
+    </div>
+  </header>
+
+  <!-- Main Sortie Selection Grid -->
+  <main>
+    <div class="deck-prompt">SELECT SORTIE CONSOLE // USE ARROW KEYS + ENTER OR CLICK CABINET</div>
+    <div class="cabinet-grid" id="cabinetGrid"></div>
+  </main>
+
+  <footer>
+    USS ENTERPRISE (CVN-65) // OFFICERS' CLUB &amp; CREW LOUNGE // USE ARROW KEYS TO NAVIGATE
+  </footer>
+
+  <!-- Launch Sortie Modal -->
+  <div class="modal-backdrop" id="launchModal">
+    <div class="modal-box">
+      <button class="modal-close" id="closeLaunchModal">[ESC] ABORT</button>
+      <div class="modal-meta" id="modalSortieTag">SORTIE 01 // INTERCEPT</div>
+      <h2 class="modal-title" id="modalGameTitle">GAME TITLE</h2>
+      <p id="modalGameDesc" style="color: #cfe2ff; line-height: 1.5; margin-bottom: 12px;"></p>
+      <div style="font-size: 0.85rem; color: var(--neon-amber);">
+        TARGET ROM FILE: <span id="modalFilePath" style="color: var(--neon-green);"></span>
+      </div>
+
+      <div class="action-row">
+        <a id="launchRomBtn" href="#" class="btn-primary">LAUNCH FULL MISSION</a>
+        <button id="toggleSimBtn" class="btn-secondary">TEST F-14 RADAR SIMULATOR</button>
+      </div>
+
+      <div class="sim-container" id="simContainer">
+        <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--neon-amber); margin-bottom:6px;">
+          <span>F-14 TOMCAT // RADAR INTERCEPT TEST</span>
+          <span>ARROWS/WASD: FLY | SPACE: SIDEWINDER | SCORE: <span id="simScore">0</span></span>
+        </div>
+        <canvas id="simCanvas" width="600" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- GitHub Flight Briefing Modal -->
+  <div class="modal-backdrop" id="briefingModal">
+    <div class="modal-box">
+      <button class="modal-close" id="closeBriefingModal">[ESC] CLOSE</button>
+      <div class="modal-meta">DEPLOYMENT ORDERS // GITHUB PAGES</div>
+      <h2 class="modal-title">FLIGHT DECK SETUP GUIDE</h2>
+      <p style="color:#cfe2ff; font-size:0.9rem; line-height:1.5;">
+        Keep <strong>index.html</strong> in your main folder and place your 9 completed HTML5 game files inside the <strong>games/</strong> subfolder with these exact filenames:
+      </p>
+      <pre class="briefing-code">hard-deck-arcade/
+├── index.html
+└── games/
+    ├── centipede.html
+    ├── galaga-3d.html
+    ├── space-invaders.html
+    ├── silent-service.html
+    ├── keystone-kapers.html
+    ├── asteroids-3d.html
+    ├── yars-revenge.html
+    ├── timber-tilt.html
+    └── slide-out.html</pre>
+      <p style="color:#cfe2ff; font-size:0.88rem; line-height:1.5;">
+        1. Create a public GitHub repository.<br>
+        2. Drag and drop both <strong>index.html</strong> and the <strong>games</strong> folder into the repo and commit.<br>
+        3. Open <strong>Settings &rarr; Pages</strong>, select the <strong>main</strong> branch, and click <strong>Save</strong> to go live.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const GAMES = [
+      {
+        id: '01',
+        title: 'CENTIPEDE',
+        badge: 'AIR-TO-GROUND',
+        file: 'games/centipede.html',
+        desc: 'Defend the perimeter against segmented bogeys weaving through dense mushroom cover.',
+        previewType: 'centipede'
+      },
+      {
+        id: '02',
+        title: 'GALAGA 3D',
+        badge: 'FLEET DEFENSE',
+        file: 'games/galaga-3d.html',
+        desc: 'First-person cockpit starfighter combat against incoming alien attack formations.',
+        previewType: 'galaga'
+      },
+      {
+        id: '03',
+        title: 'SPACE INVADERS',
+        badge: 'ORBITAL INTERCEPT',
+        file: 'games/space-invaders.html',
+        desc: 'Hold the defensive line and neutralize descending enemy squadrons before touchdown.',
+        previewType: 'invaders'
+      },
+      {
+        id: '04',
+        title: 'SILENT SERVICE',
+        badge: '⚓ NAVY SUBMARINE COMMAND',
+        isSub: true,
+        file: 'games/silent-service.html',
+        desc: 'Tactical WWII submarine warfare. Track convoys on sonar, manage depth, and fire torpedoes.',
+        previewType: 'sonar'
+      },
+      {
+        id: '05',
+        title: 'KEYSTONE KAPERS',
+        badge: 'DECK PATROL',
+        file: 'games/keystone-kapers.html',
+        desc: 'High-speed pursuit across multi-level floors—dodge hazards and apprehend the suspect.',
+        previewType: 'kapers'
+      },
+      {
+        id: '06',
+        title: 'ASTEROIDS 3D COCKPIT',
+        badge: 'DEEP SPACE RECON',
+        file: 'games/asteroids-3d.html',
+        desc: '3D cockpit vector navigation through dense asteroid fields with twin-cannon defenses.',
+        previewType: 'asteroids'
+      },
+      {
+        id: '07',
+        title: "YAR'S REVENGE",
+        badge: 'STRIKE MISSION',
+        file: 'games/yars-revenge.html',
+        desc: 'Nibble through the Qotile energy shield and fire the Zorlon Cannon to breach the core.',
+        previewType: 'yars'
+      },
+      {
+        id: '08',
+        title: 'TIMBER TILT',
+        badge: 'LOGISTICS OPS',
+        file: 'games/timber-tilt.html',
+        desc: 'Precision puzzle strategy—clear rows, columns, and stubborn timber knots under pressure.',
+        previewType: 'timber'
+      },
+      {
+        id: '09',
+        title: 'SLIDE OUT',
+        badge: 'CARGO DECK CLEARANCE',
+        file: 'games/slide-out.html',
+        desc: 'Maneuver heavy transport rigs out of a gridlocked container yard to clear the exit lane.',
+        previewType: 'slide'
+      }
+    ];
+
+    // Web Audio API Sound Effects
+    let sfxEnabled = true;
+    let audioCtx = null;
+
+    function playTone(type) {
+      if (!sfxEnabled) return;
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const now = audioCtx.currentTime;
+
+      if (type === 'blip') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1320, now + 0.06);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.start(now);
+        osc.stop(now + 0.07);
+      } else if (type === 'sonar') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1150, now);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      } else if (type === 'launch') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.25);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc.start(now);
+        osc.stop(now + 0.28);
+      }
+    }
+
+    // Build Cabinet Cards
+    const grid = document.getElementById('cabinetGrid');
+    let selectedIndex = 0;
+
+    GAMES.forEach((game, idx) => {
+      const card = document.createElement('div');
+      card.className = 'cabinet-card' + (idx === 0 ? ' selected' : '');
+      card.tabIndex = 0;
+      card.dataset.index = idx;
+
+      card.innerHTML = `
+        <div>
+          <div class="cabinet-header">
+            <span class="sortie-id">SORTIE ${game.id}</span>
+            <span class="mission-badge ${game.isSub ? 'sub-command' : ''}">${game.badge}</span>
+          </div>
+          <div class="crt-screen">
+            <canvas width="280" height="135" data-preview="${game.previewType}"></canvas>
+          </div>
+          <div class="game-title">${game.title}</div>
+          <div class="game-desc">${game.desc}</div>
+        </div>
+        <div class="cabinet-footer">
+          <span class="rom-path">${game.file}</span>
+          <span class="launch-pill">[PLAY &rarr;]</span>
+        </div>
+      `;
+
+      card.addEventListener('mouseenter', () => {
+        selectCard(idx);
+        playTone(game.isSub ? 'sonar' : 'blip');
+      });
+
+      card.addEventListener('click', () => {
+        selectCard(idx);
+        openLaunchModal(game);
+      });
+
+      grid.appendChild(card);
+    });
+
+    function selectCard(idx) {
+      selectedIndex = idx;
+      document.querySelectorAll('.cabinet-card').forEach((c, i) => {
+        c.classList.toggle('selected', i === idx);
+      });
+    }
+
+    // Keyboard Navigation
+    document.addEventListener('keydown', (e) => {
+      const launchOpen = document.getElementById('launchModal').classList.contains('open');
+      const briefOpen = document.getElementById('briefingModal').classList.contains('open');
+
+      if (e.key === 'Escape') {
+        closeModals();
+        return;
+      }
+
+      if (launchOpen || briefOpen) return;
+
+      if (e.key === 'ArrowRight') {
+        selectCard((selectedIndex + 1) % GAMES.length);
+        playTone('blip');
+      } else if (e.key === 'ArrowLeft') {
+        selectCard((selectedIndex - 1 + GAMES.length) % GAMES.length);
+        playTone('blip');
+      } else if (e.key === 'ArrowDown') {
+        selectCard((selectedIndex + 3) % GAMES.length);
+        playTone('blip');
+      } else if (e.key === 'ArrowUp') {
+        selectCard((selectedIndex - 3 + GAMES.length) % GAMES.length);
+        playTone('blip');
+      } else if (e.key === 'Enter') {
+        openLaunchModal(GAMES[selectedIndex]);
+      }
+    });
+
+    // Animated Mini CRT Previews
+    const previewCanvases = document.querySelectorAll('.crt-screen canvas');
+    let tick = 0;
+
+    function renderPreviews() {
+      tick += 0.04;
+      previewCanvases.forEach((canvas) => {
+        const ctx = canvas.getContext('2d');
+        const type = canvas.dataset.preview;
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.fillStyle = '#030812';
+        ctx.fillRect(0, 0, w, h);
+
+        if (type === 'sonar') {
+          const cx = w / 2, cy = h / 2, r = 52;
+          ctx.strokeStyle = 'rgba(0, 255, 102, 0.35)';
+          ctx.lineWidth = 1;
+          [18, 35, 52].forEach(rad => {
+            ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.stroke();
+          });
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + Math.cos(tick * 1.4) * r, cy + Math.sin(tick * 1.4) * r);
+          ctx.strokeStyle = '#00ff66';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = '#00ff66';
+          ctx.fillRect(cx + 22, cy - 18, 4, 4);
+        } else if (type === 'centipede') {
+          for (let i = 0; i < 8; i++) {
+            const x = ((tick * 45 + i * 18) % (w - 20)) + 10;
+            const y = 30 + Math.sin(tick * 2 + i * 0.6) * 18 + i * 6;
+            ctx.fillStyle = i === 0 ? '#ff2a55' : '#00ff66';
+            ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+          }
+        } else if (type === 'galaga' || type === 'asteroids') {
+          ctx.strokeStyle = '#00f3ff';
+          ctx.lineWidth = 1.5;
+          const cx = w / 2, cy = h / 2;
+          for (let i = 1; i <= 3; i++) {
+            const s = ((tick * 25 + i * 35) % 110);
+            ctx.strokeRect(cx - s, cy - s * 0.55, s * 2, s * 1.1);
+          }
+          ctx.strokeStyle = '#ff9e00';
+          ctx.beginPath();
+          ctx.moveTo(cx - 14, cy); ctx.lineTo(cx + 14, cy);
+          ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy + 14);
+          ctx.stroke();
+        } else if (type === 'invaders') {
+          ctx.fillStyle = '#00f3ff';
+          const shift = Math.sin(tick * 1.5) * 28;
+          for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 6; c++) {
+              ctx.fillRect(65 + c * 26 + shift, 22 + r * 22, 14, 10);
+            }
+          }
+          ctx.fillStyle = '#00ff66';
+          ctx.fillRect(w / 2 - 10, h - 18, 20, 8);
+        } else if (type === 'yars') {
+          ctx.fillStyle = '#ff9e00';
+          for (let y = 20; y < h - 20; y += 12) {
+            ctx.fillRect(w - 55, y, 16, 8);
+          }
+          ctx.fillStyle = '#ff2a55';
+          ctx.beginPath();
+          ctx.arc(65 + Math.cos(tick * 2) * 15, h / 2 + Math.sin(tick * 3) * 25, 9, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = '#ff9e00';
+          ctx.lineWidth = 2;
+          for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 4; c++) {
+              ctx.fillStyle = (r + c + Math.floor(tick)) % 3 === 0 ? 'rgba(0, 243, 255, 0.35)' : 'rgba(255, 158, 0, 0.25)';
+              ctx.fillRect(58 + c * 42, 24 + r * 30, 36, 24);
+              ctx.strokeRect(58 + c * 42, 24 + r * 30, 36, 24);
+            }
+          }
+        }
+      });
+      requestAnimationFrame(renderPreviews);
+    }
+    renderPreviews();
+
+    // Launch Modal & Mini F-14 Simulator
+    const launchModal = document.getElementById('launchModal');
+    const briefingModal = document.getElementById('briefingModal');
+    const simContainer = document.getElementById('simContainer');
+    let simRunning = false;
+
+    function openLaunchModal(game) {
+      playTone('launch');
+      document.getElementById('modalSortieTag').textContent = `SORTIE ${game.id} // ${game.badge}`;
+      document.getElementById('modalGameTitle').textContent = game.title;
+      document.getElementById('modalGameDesc').textContent = game.desc;
+      document.getElementById('modalFilePath').textContent = game.file;
+      document.getElementById('launchRomBtn').href = game.file;
+      simContainer.classList.remove('active');
+      simRunning = false;
+      launchModal.classList.add('open');
+    }
+
+    function closeModals() {
+      launchModal.classList.remove('open');
+      briefingModal.classList.remove('open');
+      simRunning = false;
+    }
+
+    document.getElementById('closeLaunchModal').addEventListener('click', closeModals);
+    document.getElementById('closeBriefingModal').addEventListener('click', closeModals);
+    document.getElementById('briefingBtn').addEventListener('click', () => {
+      playTone('blip');
+      briefingModal.classList.add('open');
+    });
+
+    document.getElementById('crtToggle').addEventListener('click', (e) => {
+      document.body.classList.toggle('crt-off');
+      e.target.textContent = document.body.classList.contains('crt-off') ? 'CRT: OFF' : 'CRT: ON';
+    });
+
+    document.getElementById('sfxToggle').addEventListener('click', (e) => {
+      sfxEnabled = !sfxEnabled;
+      e.target.textContent = sfxEnabled ? 'SFX: ON' : 'SFX: OFF';
+      if (sfxEnabled) playTone('blip');
+    });
+
+    // Playable Mini F-14 Radar Intercept Simulator
+    const simCanvas = document.getElementById('simCanvas');
+    const sCtx = simCanvas.getContext('2d');
+    let jet = { x: 50, y: 110 };
+    let missiles = [];
+    let bogeys = [];
+    let simScore = 0;
+    const keys = {};
+
+    window.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (simRunning && e.key === ' ') {
+        e.preventDefault();
+        missiles.push({ x: jet.x + 26, y: jet.y });
+        playTone('blip');
+      }
+    });
+    window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+    document.getElementById('toggleSimBtn').addEventListener('click', () => {
+      simContainer.classList.toggle('active');
+      simRunning = simContainer.classList.contains('active');
+      if (simRunning) {
+        jet = { x: 50, y: 110 };
+        missiles = [];
+        bogeys = [];
+        simScore = 0;
+        document.getElementById('simScore').textContent = '0';
+        runSim();
+      }
+    });
+
+    function runSim() {
+      if (!simRunning) return;
+      if ((keys['ArrowUp'] || keys['w']) && jet.y > 18) jet.y -= 3.5;
+      if ((keys['ArrowDown'] || keys['s']) && jet.y < 202) jet.y += 3.5;
+      if ((keys['ArrowLeft'] || keys['a']) && jet.x > 20) jet.x -= 3.5;
+      if ((keys['ArrowRight'] || keys['d']) && jet.x < 260) jet.x += 3.5;
+
+      if (Math.random() < 0.03) {
+        bogeys.push({ x: 610, y: 20 + Math.random() * 180, speed: 2.5 + Math.random() * 2 });
+      }
+
+      sCtx.fillStyle = '#040914';
+      sCtx.fillRect(0, 0, 600, 220);
+
+      // Grid lines
+      sCtx.strokeStyle = 'rgba(0, 243, 255, 0.12)';
+      for (let x = 0; x < 600; x += 40) {
+        sCtx.beginPath(); sCtx.moveTo(x, 0); sCtx.lineTo(x, 220); sCtx.stroke();
+      }
+
+      // Draw F-14
+      sCtx.fillStyle = '#00f3ff';
+      sCtx.beginPath();
+      sCtx.moveTo(jet.x + 24, jet.y);
+      sCtx.lineTo(jet.x - 14, jet.y - 12);
+      sCtx.lineTo(jet.x - 8, jet.y);
+      sCtx.lineTo(jet.x - 14, jet.y + 12);
+      sCtx.closePath();
+      sCtx.fill();
+
+      // Missiles
+      sCtx.fillStyle = '#ff9e00';
+      missiles.forEach(m => {
+        m.x += 7;
+        sCtx.fillRect(m.x, m.y - 2, 12, 4);
+      });
+      missiles = missiles.filter(m => m.x < 610);
+
+      // Bogeys
+      sCtx.fillStyle = '#ff2a55';
+      bogeys.forEach((b, bi) => {
+        b.x -= b.speed;
+        sCtx.beginPath();
+        sCtx.moveTo(b.x - 14, b.y);
+        sCtx.lineTo(b.x + 12, b.y - 10);
+        sCtx.lineTo(b.x + 12, b.y + 10);
+        sCtx.closePath();
+        sCtx.fill();
+
+        missiles.forEach((m, mi) => {
+          if (Math.abs(m.x - b.x) < 18 && Math.abs(m.y - b.y) < 14) {
+            bogeys.splice(bi, 1);
+            missiles.splice(mi, 1);
+            simScore += 100;
+            document.getElementById('simScore').textContent = simScore;
+            playTone('launch');
+          }
+        });
+      });
+      bogeys = bogeys.filter(b => b.x > -20);
+
+      requestAnimationFrame(runSim);
+    }
+  </script>
+</body>
+</html>
